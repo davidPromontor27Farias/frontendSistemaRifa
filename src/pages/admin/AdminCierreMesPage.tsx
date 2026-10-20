@@ -1,9 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-    ClipboardCheck,
-    Percent,
-    Boxes,
-    FileCheck2,
     CalendarDays,
     Save,
     Ticket,
@@ -15,7 +11,6 @@ import {
 import { useParticipantes } from '../../store/participantesStore';
 import {
     useMatrizVentas,
-    BLOQUES_VENTAS,
     calcularBoletosPorVentaExtra,
     BOLETOS_POR_CUOTA,
     BOLETOS_POR_ESPECIFICACION,
@@ -44,10 +39,6 @@ function valorInputMesActual(): string {
 
 function formatearFecha(iso: string): string {
     return new Intl.DateTimeFormat('es-MX', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(iso));
-}
-
-function formatearMiles(valor: number): string {
-    return new Intl.NumberFormat('es-MX').format(valor);
 }
 
 export function AdminCierreMesPage() {
@@ -91,7 +82,8 @@ export function AdminCierreMesPage() {
 
     const totales = filas.reduce(
         (acc, fila) => {
-            acc.porCuota += fila.cuotaCumplida ? BOLETOS_POR_CUOTA : 0;
+            if (!fila.cuotaCumplida) return acc;
+            acc.porCuota += BOLETOS_POR_CUOTA;
             acc.porBloques += calcularBoletosPorVentaExtra(fila);
             acc.porEspecificaciones += fila.especificaciones * BOLETOS_POR_ESPECIFICACION;
             return acc;
@@ -207,30 +199,6 @@ export function AdminCierreMesPage() {
     return (
         <div className="space-y-6 text-slate-100 pt-10">
 
-            {/* ENCABEZADO DE LA SECCIÓN */}
-            <div className="bg-slate-900/85 backdrop-blur-xl p-6 rounded-3xl border border-white/10 shadow-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-[#4A8B2C]/10 rounded-full blur-3xl pointer-events-none" />
-
-                <div className="relative z-10 flex items-center gap-3.5">
-                    <div className="p-3 rounded-2xl bg-gradient-to-br from-[#4A8B2C]/20 to-[#ee7624]/20 border border-white/15 text-[#ee7624] shadow-inner shrink-0">
-                        <ClipboardCheck className="w-6 h-6" />
-                    </div>
-                    <div>
-                        <div className="flex items-center gap-2">
-                            <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                                Cierre de Mes · Matriz de Ventas
-                            </h1>
-                            <span className="px-2.5 py-0.5 rounded-full bg-[#4A8B2C]/20 border border-[#4A8B2C]/30 text-[#4A8B2C] text-[10px] font-black uppercase tracking-widest">
-                                Paso 3A · 3B
-                            </span>
-                        </div>
-                        <p className="text-xs sm:text-sm text-slate-400 mt-1 leading-relaxed">
-                            El administrador carga el Excel de ventas y aprueba la generación de boletos del mes.
-                        </p>
-                    </div>
-                </div>
-            </div>
-
             {/* ESTATUS DE APROBACIÓN */}
             {aprobado && fechaAprobacion && (
                 <div className="flex items-center gap-3 bg-[#4A8B2C]/10 border border-[#4A8B2C]/30 text-emerald-300 text-xs sm:text-sm font-semibold rounded-2xl p-4 backdrop-blur-md shadow-lg">
@@ -250,63 +218,6 @@ export function AdminCierreMesPage() {
                     </button>
                 </div>
             )}
-
-            {/* MATRIZ DE CUMPLIMIENTO POR VENTAS (REGLAS) */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                <div className="bg-slate-900/85 backdrop-blur-xl p-5 rounded-3xl border border-white/10 shadow-xl space-y-2.5">
-                    <div className="flex items-center gap-2.5">
-                        <div className="p-2 rounded-xl bg-[#4A8B2C]/20 border border-[#4A8B2C]/30 text-emerald-300 shrink-0">
-                            <Percent className="w-4 h-4" />
-                        </div>
-                        <h3 className="text-xs font-black text-white uppercase tracking-wide">1 · Canal y cuota</h3>
-                    </div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                        <strong className="text-slate-300">Regla:</strong> 100% en un canal y al menos 90% en el otro.
-                    </p>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                        <strong className="text-slate-300">Captura:</strong> el administrador sube el Excel de vendedores.
-                    </p>
-                    <p className="text-[11px] text-[#ee7624] font-semibold leading-relaxed">
-                        Sistema: calcula automáticamente y asigna {BOLETOS_POR_CUOTA} boleto de cuota.
-                    </p>
-                </div>
-
-                <div className="bg-slate-900/85 backdrop-blur-xl p-5 rounded-3xl border border-white/10 shadow-xl space-y-2.5">
-                    <div className="flex items-center gap-2.5">
-                        <div className="p-2 rounded-xl bg-[#4A8B2C]/20 border border-[#4A8B2C]/30 text-emerald-300 shrink-0">
-                            <Boxes className="w-4 h-4" />
-                        </div>
-                        <h3 className="text-xs font-black text-white uppercase tracking-wide">2 · Venta extra por bloque</h3>
-                    </div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                        <strong className="text-slate-300">Regla:</strong> excedente sobre el mayor entre presupuesto y promedio mensual 2026.
-                    </p>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                        <strong className="text-slate-300">Captura:</strong> bloque del vendedor y venta extra en pesos.
-                    </p>
-                    <p className="text-[11px] text-[#ee7624] font-semibold leading-relaxed">
-                        Sistema: 1 boleto por cada umbral de su bloque, sin límite.
-                    </p>
-                </div>
-
-                <div className="bg-slate-900/85 backdrop-blur-xl p-5 rounded-3xl border border-white/10 shadow-xl space-y-2.5">
-                    <div className="flex items-center gap-2.5">
-                        <div className="p-2 rounded-xl bg-[#4A8B2C]/20 border border-[#4A8B2C]/30 text-emerald-300 shrink-0">
-                            <FileCheck2 className="w-4 h-4" />
-                        </div>
-                        <h3 className="text-xs font-black text-white uppercase tracking-wide">3 · Especificaciones</h3>
-                    </div>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                        <strong className="text-slate-300">Regla:</strong> aceptadas con venta estimada &ge; 3M.
-                    </p>
-                    <p className="text-[11px] text-slate-400 leading-relaxed">
-                        <strong className="text-slate-300">Captura:</strong> número logrado en el mes.
-                    </p>
-                    <p className="text-[11px] text-[#ee7624] font-semibold leading-relaxed">
-                        Sistema: suma {BOLETOS_POR_ESPECIFICACION} boleto por cada una.
-                    </p>
-                </div>
-            </div>
 
             {/* MES A CAPTURAR + CARGA DE EXCEL + BLOQUES VIGENTES */}
             <div className="bg-slate-900/85 backdrop-blur-xl rounded-3xl border border-white/10 p-5 shadow-2xl space-y-4">
@@ -360,29 +271,12 @@ export function AdminCierreMesPage() {
                     </div>
                 )}
 
-                {/* BLOQUES VIGENTES (fijos, referencia) */}
-                <div className="space-y-1.5">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Bloques vigentes este mes</label>
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        {BLOQUES_VENTAS.map((b) => (
-                            <div key={b.nombre} className="px-3 py-2.5 rounded-xl bg-slate-950/60 border border-white/10">
-                                <p className="text-[11px] font-bold text-white">{b.nombre}</p>
-                                <p className="text-[10px] text-slate-400">{b.rango}</p>
-                                <p className="text-[10px] text-[#ee7624] font-semibold mt-0.5">+${formatearMiles(b.umbralExtra)} / boleto</p>
-                            </div>
-                        ))}
-                    </div>
-                </div>
             </div>
 
             {/* TABLA DE MATRIZ */}
             <TablaMatrizVentas
                 filas={filasConParticipante}
                 onCambiarCuota={(i, valor) => actualizarFila(i, { cuotaCumplida: valor })}
-                onCambiarBloque={(i, valor) => actualizarFila(i, { bloque: valor || null })}
-                onCambiarVentaExtra={(i, valor) => actualizarFila(i, { ventaExtra: valor })}
-                onCambiarVentaExtraCastigada={(i, valor) => actualizarFila(i, { ventaExtraCastigada: valor })}
-                onCambiarEspecificaciones={(i, valor) => actualizarFila(i, { especificaciones: valor })}
             />
 
             {/* RESUMEN DEL MES */}

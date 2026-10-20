@@ -38,9 +38,13 @@ export function calcularBoletosPorVentaExtra(fila: FilaMatrizVentas): number {
     return Math.floor(calcularVentaExtraEfectiva(fila) / definicion.umbralExtra);
 }
 
+// Regla 1 es un candado: si el vendedor no cumple cuota por canal, queda bloqueado
+// y no recibe boletos de ninguna otra regla (venta extra, especificaciones, etc.),
+// sin importar qué tan bien le fue ahí.
 export function calcularBoletosFila(fila: FilaMatrizVentas): number {
+    if (!fila.cuotaCumplida) return 0;
     return (
-        (fila.cuotaCumplida ? BOLETOS_POR_CUOTA : 0) +
+        BOLETOS_POR_CUOTA +
         calcularBoletosPorVentaExtra(fila) +
         fila.especificaciones * BOLETOS_POR_ESPECIFICACION
     );

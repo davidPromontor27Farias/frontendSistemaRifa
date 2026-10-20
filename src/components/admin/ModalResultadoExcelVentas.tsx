@@ -40,7 +40,14 @@ export function ModalResultadoExcelVentas({ resultado, procesando, onCancelar, o
     const { cuotaCanal, ventaExtraBloque } = resultado;
     const ganadoresCuota = cuotaCanal.aplicados.filter((a) => a.cuotaCumplida);
     const noGanadoresCuota = cuotaCanal.aplicados.filter((a) => !a.cuotaCumplida);
-    const conBoletosBloque = ventaExtraBloque.aplicados.filter((a) => a.boletos > 0);
+
+    // Regla 1 es un candado: quien no cumplió cuota por canal queda bloqueado y no
+    // suma boletos de Regla 2 (ni de ninguna otra), aunque su venta extra sí alcance.
+    const cuotaCumplidaPorParticipante = new Map(cuotaCanal.aplicados.map((a) => [a.participanteId, a.cuotaCumplida]));
+    const estaBloqueadoPorCuota = (participanteId: string) => cuotaCumplidaPorParticipante.get(participanteId) !== true;
+
+    const conBoletosBloque = ventaExtraBloque.aplicados.filter((a) => a.boletos > 0 && !estaBloqueadoPorCuota(a.participanteId));
+    const bloqueadosPorCuota = ventaExtraBloque.aplicados.filter((a) => a.boletos > 0 && estaBloqueadoPorCuota(a.participanteId));
     const sinBoletosBloque = ventaExtraBloque.aplicados.filter((a) => a.boletos === 0);
 
     const totalAplicados = cuotaCanal.aplicados.length + ventaExtraBloque.aplicados.length;
@@ -162,6 +169,36 @@ export function ModalResultadoExcelVentas({ resultado, procesando, onCancelar, o
                                 </ul>
                             )}
                         </div>
+
+                        {bloqueadosPorCuota.length > 0 && (
+                            <div className="space-y-2">
+                                <h4 className="text-[11px] font-bold uppercase tracking-wider text-amber-300 flex items-center gap-1.5">
+                                    <AlertTriangle className="w-3.5 h-3.5" />
+                                    Bloqueados por Regla 1 — no suman boleto ({bloqueadosPorCuota.length})
+                                </h4>
+                                <ul className="space-y-1.5">
+                                    {bloqueadosPorCuota.map((a) => (
+                                        <li
+                                            key={a.participanteId}
+                                            className="flex flex-col gap-1 bg-amber-500/10 border border-amber-500/30 rounded-xl px-3 py-2"
+                                        >
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="text-xs font-bold text-white">
+                                                    {a.nombre} <span className="text-slate-400 font-normal">· {a.bloque}</span>
+                                                </span>
+                                                <span className="text-[10px] text-amber-300 font-mono font-bold">
+                                                    {a.boletos} boleto{a.boletos === 1 ? '' : 's'} anulado{a.boletos === 1 ? '' : 's'}
+                                                </span>
+                                            </div>
+                                            <span className="text-[10px] text-slate-400 font-mono">
+                                                venta ${formatearMiles(a.ventaTotalMes)} − base ${formatearMiles(a.baseMensual)} = excedente $
+                                                {formatearMiles(a.ventaExtra)} · no cumplió la cuota por canal
+                                            </span>
+                                        </li>
+                                    ))}
+                                </ul>
+                            </div>
+                        )}
 
                         <div className="space-y-2">
                             <h4 className="text-[11px] font-bold uppercase tracking-wider text-rose-300 flex items-center gap-1.5">
