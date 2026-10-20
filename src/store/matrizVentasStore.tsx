@@ -1,7 +1,7 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { CierreMesVentas, FilaMatrizVentas } from '../types/matrizVentas';
 import type { AcumuladoParticipante } from '../types/votacionMensual';
-import { leerStorage, escribirStorage } from './storageHelpers';
+import { apiFetch } from '../lib/api';
 
 export const BOLETOS_POR_CUOTA = 1;
 export const BOLETOS_POR_ESPECIFICACION = 1;
@@ -48,29 +48,47 @@ export function calcularBoletosFila(fila: FilaMatrizVentas): number {
 
 interface MatrizVentasContextValue {
     cierres: CierreMesVentas[];
+    cargando: boolean;
     obtenerCierre: (mesClave: string) => CierreMesVentas | undefined;
-    guardarCierre: (cierre: CierreMesVentas) => void;
+    guardarCierre: (cierre: CierreMesVentas) => Promise<void>;
     calcularAcumuladosPorMatriz: () => AcumuladoParticipante[];
 }
 
 const MatrizVentasContext = createContext<MatrizVentasContextValue | null>(null);
 
 export function MatrizVentasProvider({ children }: { children: ReactNode }) {
-    const [cierres, setCierres] = useState<CierreMesVentas[]>(() => leerStorage('matrizVentasCierres', []));
+    const [cierres, setCierres] = useState<CierreMesVentas[]>([]);
+    const [cargando, setCargando] = useState(true);
+
+    const recargar = useCallback(async () => {
+        setCargando(true);
+        try {
+            const datos = await apiFetch<CierreMesVentas[]>('/api/cierre-mes');
+            setCierres(datos);
+        } finally {
+            setCargando(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        recargar();
+    }, [recargar]);
 
     const obtenerCierre = useCallback(
         (mesClave: string) => cierres.find((c) => c.mesClave === mesClave),
         [cierres]
     );
 
-    const guardarCierre = useCallback((cierre: CierreMesVentas) => {
-        setCierres((actual) => {
-            const sinEseMes = actual.filter((c) => c.mesClave !== cierre.mesClave);
-            const nuevaLista = [...sinEseMes, cierre];
-            escribirStorage('matrizVentasCierres', nuevaLista);
-            return nuevaLista;
-        });
-    }, []);
+    const guardarCierre = useCallback(
+        async (cierre: CierreMesVentas) => {
+            await apiFetch<CierreMesVentas>(`/api/cierre-mes/${cierre.mesClave}`, {
+                method: 'PUT',
+                body: JSON.stringify(cierre),
+            });
+            await recargar();
+        },
+        [recargar]
+    );
 
     const calcularAcumuladosPorMatriz = useCallback((): AcumuladoParticipante[] => {
         const mapa = new Map<string, AcumuladoParticipante>();
@@ -93,8 +111,8 @@ export function MatrizVentasProvider({ children }: { children: ReactNode }) {
     }, [cierres]);
 
     const valor = useMemo<MatrizVentasContextValue>(
-        () => ({ cierres, obtenerCierre, guardarCierre, calcularAcumuladosPorMatriz }),
-        [cierres, obtenerCierre, guardarCierre, calcularAcumuladosPorMatriz]
+        () => ({ cierres, cargando, obtenerCierre, guardarCierre, calcularAcumuladosPorMatriz }),
+        [cierres, cargando, obtenerCierre, guardarCierre, calcularAcumuladosPorMatriz]
     );
 
     return <MatrizVentasContext.Provider value={valor}>{children}</MatrizVentasContext.Provider>;

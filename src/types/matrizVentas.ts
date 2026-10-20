@@ -1,6 +1,7 @@
 export interface FilaMatrizVentas {
     participanteId: string;
     cuotaCumplida: boolean;
+    detalleCuota: string | null;
     bloque: string | null;
     ventaExtra: number;
     ventaExtraCastigada: number;

@@ -89,7 +89,11 @@ export function TablaMatrizVentas({
                                         <button
                                             type="button"
                                             onClick={() => onCambiarCuota(i, !fila.cuotaCumplida)}
-                                            title="Marcar: 100% en un canal y al menos 90% en el otro"
+                                            title={
+                                                fila.detalleCuota
+                                                    ? `Cumplimiento por canal: ${fila.detalleCuota}`
+                                                    : 'Marcar: 100% en un canal y al menos 90% en el otro'
+                                            }
                                             className={`inline-flex items-center justify-center w-7 h-7 rounded-lg border transition active:scale-90 cursor-pointer ${
                                                 fila.cuotaCumplida
                                                     ? 'bg-[#4A8B2C]/30 border-[#4A8B2C]/50 text-emerald-300'
@@ -183,9 +187,9 @@ export function TablaMatrizVentas({
                                 <td colSpan={6} className="px-5 py-12 text-center text-slate-500">
                                     <div className="flex flex-col items-center justify-center gap-2">
                                         <User className="w-8 h-8 text-slate-600 stroke-[1.5]" />
-                                        <p className="text-xs font-bold text-slate-400">No hay participantes activos registrados</p>
+                                        <p className="text-xs font-bold text-slate-400">Todavía no hay vendedores cargados este mes</p>
                                         <p className="text-[11px] text-slate-500">
-                                            Da de alta o reactiva colaboradores en "Participantes" para que aparezcan aquí.
+                                            Sube el Excel de vendedores para iniciar el cierre de este mes.
                                         </p>
                                     </div>
                                 </td>

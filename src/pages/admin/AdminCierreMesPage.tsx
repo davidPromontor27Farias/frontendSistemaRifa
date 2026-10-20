@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
     ClipboardCheck,
     Percent,
@@ -9,6 +9,8 @@ import {
     Ticket,
     CheckCircle2,
     RotateCcw,
+    UploadCloud,
+    AlertTriangle,
 } from 'lucide-react';
 import { useParticipantes } from '../../store/participantesStore';
 import {
@@ -19,16 +21,25 @@ import {
     BOLETOS_POR_ESPECIFICACION,
 } from '../../store/matrizVentasStore';
 import { TablaMatrizVentas } from '../../components/admin/TablaMatrizVentas';
+import { ModalResultadoExcelVentas, type ResultadoProcesarExcelVentas } from '../../components/admin/ModalResultadoExcelVentas';
 import type { FilaMatrizVentas } from '../../types/matrizVentas';
+import { apiFetch } from '../../lib/api';
 
 function etiquetaDeMes(fecha: Date): string {
     const cruda = new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' }).format(fecha);
     return cruda.charAt(0).toUpperCase() + cruda.slice(1);
 }
 
+const MESES_CONCURSO = [
+    { valor: '2026-10', etiqueta: 'Octubre 2026' },
+    { valor: '2026-11', etiqueta: 'Noviembre 2026' },
+    { valor: '2026-12', etiqueta: 'Diciembre 2026' },
+];
+
 function valorInputMesActual(): string {
     const ahora = new Date();
-    return `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`;
+    const actual = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`;
+    return MESES_CONCURSO.some((m) => m.valor === actual) ? actual : MESES_CONCURSO[0].valor;
 }
 
 function formatearFecha(iso: string): string {
@@ -40,7 +51,7 @@ function formatearMiles(valor: number): string {
 }
 
 export function AdminCierreMesPage() {
-    const { activos, lista } = useParticipantes();
+    const { lista } = useParticipantes();
     const { obtenerCierre, guardarCierre } = useMatrizVentas();
 
     const [mesInput, setMesInput] = useState(valorInputMesActual);
@@ -49,38 +60,27 @@ export function AdminCierreMesPage() {
     const [fechaAprobacion, setFechaAprobacion] = useState<string | null>(null);
     const [guardadoRecientemente, setGuardadoRecientemente] = useState(false);
 
+    const inputExcelRef = useRef<HTMLInputElement>(null);
+    const [cargandoExcel, setCargandoExcel] = useState(false);
+    const [errorExcel, setErrorExcel] = useState<string | null>(null);
+    const [modalResultado, setModalResultado] = useState<ResultadoProcesarExcelVentas | null>(null);
+    const [autorizando, setAutorizando] = useState(false);
+
     const [anioTexto, mesTexto] = mesInput.split('-');
     const mesIndice = Number(mesTexto) - 1;
     const fechaReferencia = new Date(Number(anioTexto), mesIndice, 1);
     const mesClave = `${Number(anioTexto)}-${mesIndice + 1}`;
     const mesEtiqueta = etiquetaDeMes(fechaReferencia);
 
-    const activosOrdenados = useMemo(
-        () => [...activos].sort((a, b) => a.nombre.localeCompare(b.nombre)),
-        [activos]
-    );
-
     useEffect(() => {
         const existente = obtenerCierre(mesClave);
-        const filasGuardadasPorId = new Map((existente?.filas ?? []).map((f) => [f.participanteId, f]));
-        const filasCompletas = activosOrdenados.map(
-            (p): FilaMatrizVentas =>
-                filasGuardadasPorId.get(p.id) ?? {
-                    participanteId: p.id,
-                    cuotaCumplida: false,
-                    bloque: null,
-                    ventaExtra: 0,
-                    ventaExtraCastigada: 0,
-                    especificaciones: 0,
-                }
-        );
-        setFilas(filasCompletas);
+        setFilas(existente?.filas ?? []);
         setAprobado(existente?.aprobado ?? false);
         setFechaAprobacion(existente?.fechaAprobacion ?? null);
         setGuardadoRecientemente(false);
-        // Se recarga al cambiar de mes o al cambiar el padrón de activos; no reacciona a cada guardado para no pisar la edición en curso.
+        // Se recarga al cambiar de mes; no reacciona a cada guardado para no pisar la edición en curso.
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [mesClave, activosOrdenados]);
+    }, [mesClave]);
 
     const participantePorId = useMemo(() => new Map(lista.map((p) => [p.id, p])), [lista]);
 
@@ -105,39 +105,103 @@ export function AdminCierreMesPage() {
         setGuardadoRecientemente(false);
     }
 
-    function construirCierre(marcarAprobado: boolean) {
+    function construirCierre(filasFinales: FilaMatrizVentas[], marcarAprobado: boolean) {
         return {
             mesClave,
             mesEtiqueta,
-            filas,
+            filas: filasFinales,
             aprobado: marcarAprobado,
             fechaGuardado: new Date().toISOString(),
             fechaAprobacion: marcarAprobado ? new Date().toISOString() : null,
         };
     }
 
-    function manejarGuardarBorrador() {
-        const cierre = construirCierre(false);
-        guardarCierre(cierre);
+    async function manejarGuardarBorrador() {
+        const cierre = construirCierre(filas, false);
+        await guardarCierre(cierre);
         setAprobado(false);
         setFechaAprobacion(null);
         setGuardadoRecientemente(true);
     }
 
-    function manejarAprobar() {
-        const cierre = construirCierre(true);
-        guardarCierre(cierre);
+    async function manejarAprobar() {
+        const cierre = construirCierre(filas, true);
+        await guardarCierre(cierre);
         setAprobado(true);
         setFechaAprobacion(cierre.fechaAprobacion);
         setGuardadoRecientemente(true);
     }
 
-    function manejarReabrir() {
-        const cierre = construirCierre(false);
-        guardarCierre(cierre);
+    async function manejarReabrir() {
+        const cierre = construirCierre(filas, false);
+        await guardarCierre(cierre);
         setAprobado(false);
         setFechaAprobacion(null);
         setGuardadoRecientemente(false);
+    }
+
+    function abrirSelectorExcel() {
+        inputExcelRef.current?.click();
+    }
+
+    async function manejarArchivoExcelSeleccionado(evento: React.ChangeEvent<HTMLInputElement>) {
+        const archivo = evento.target.files?.[0];
+        evento.target.value = '';
+        if (!archivo) return;
+
+        setCargandoExcel(true);
+        setErrorExcel(null);
+        try {
+            const formData = new FormData();
+            formData.append('archivo', archivo);
+            const resultado = await apiFetch<ResultadoProcesarExcelVentas>(
+                `/api/cierre-mes/${mesClave}/procesar-excel-ventas`,
+                { method: 'POST', body: formData }
+            );
+            setModalResultado(resultado);
+        } catch (error) {
+            setErrorExcel(error instanceof Error ? error.message : 'No se pudo procesar el archivo.');
+        } finally {
+            setCargandoExcel(false);
+        }
+    }
+
+    async function manejarAutorizarModal() {
+        if (!modalResultado) return;
+        setAutorizando(true);
+        try {
+            const filasPorParticipanteId = new Map(filas.map((f) => [f.participanteId, f]));
+            const cuotaPorParticipanteId = new Map(modalResultado.cuotaCanal.aplicados.map((a) => [a.participanteId, a]));
+            const bloquePorParticipanteId = new Map(modalResultado.ventaExtraBloque.aplicados.map((a) => [a.participanteId, a]));
+
+            const idsParticipantes = new Set([...cuotaPorParticipanteId.keys(), ...bloquePorParticipanteId.keys()]);
+
+            const filasFinales: FilaMatrizVentas[] = [...idsParticipantes].map((participanteId) => {
+                const existente = filasPorParticipanteId.get(participanteId);
+                const cuota = cuotaPorParticipanteId.get(participanteId);
+                const bloqueInfo = bloquePorParticipanteId.get(participanteId);
+
+                return {
+                    participanteId,
+                    cuotaCumplida: cuota?.cuotaCumplida ?? existente?.cuotaCumplida ?? false,
+                    detalleCuota: cuota?.detalleCuota ?? existente?.detalleCuota ?? null,
+                    bloque: bloqueInfo?.bloque ?? existente?.bloque ?? null,
+                    ventaExtra: bloqueInfo?.ventaExtra ?? existente?.ventaExtra ?? 0,
+                    ventaExtraCastigada: existente?.ventaExtraCastigada ?? 0,
+                    especificaciones: existente?.especificaciones ?? 0,
+                };
+            });
+
+            const cierre = construirCierre(filasFinales, true);
+            await guardarCierre(cierre);
+            setFilas(filasFinales);
+            setAprobado(true);
+            setFechaAprobacion(cierre.fechaAprobacion);
+            setGuardadoRecientemente(true);
+            setModalResultado(null);
+        } finally {
+            setAutorizando(false);
+        }
     }
 
     return (
@@ -161,7 +225,7 @@ export function AdminCierreMesPage() {
                             </span>
                         </div>
                         <p className="text-xs sm:text-sm text-slate-400 mt-1 leading-relaxed">
-                            El administrador valida el cumplimiento de ventas y aprueba la generación de boletos del mes.
+                            El administrador carga el Excel de ventas y aprueba la generación de boletos del mes.
                         </p>
                     </div>
                 </div>
@@ -200,10 +264,10 @@ export function AdminCierreMesPage() {
                         <strong className="text-slate-300">Regla:</strong> 100% en un canal y al menos 90% en el otro.
                     </p>
                     <p className="text-[11px] text-slate-400 leading-relaxed">
-                        <strong className="text-slate-300">Captura:</strong> el administrador marca la casilla.
+                        <strong className="text-slate-300">Captura:</strong> el administrador sube el Excel de vendedores.
                     </p>
                     <p className="text-[11px] text-[#ee7624] font-semibold leading-relaxed">
-                        Sistema: asigna {BOLETOS_POR_CUOTA} boleto de cuota.
+                        Sistema: calcula automáticamente y asigna {BOLETOS_POR_CUOTA} boleto de cuota.
                     </p>
                 </div>
 
@@ -244,20 +308,57 @@ export function AdminCierreMesPage() {
                 </div>
             </div>
 
-            {/* MES A CAPTURAR + BLOQUES VIGENTES */}
+            {/* MES A CAPTURAR + CARGA DE EXCEL + BLOQUES VIGENTES */}
             <div className="bg-slate-900/85 backdrop-blur-xl rounded-3xl border border-white/10 p-5 shadow-2xl space-y-4">
-                <div className="max-w-xs space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                        <CalendarDays className="w-3.5 h-3.5 text-[#ee7624]" />
-                        <span>Mes a capturar</span>
-                    </label>
-                    <input
-                        type="month"
-                        value={mesInput}
-                        onChange={(e) => setMesInput(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-2xl bg-slate-950 border border-white/10 text-xs text-white focus:outline-none focus:border-[#4A8B2C] focus:ring-1 focus:ring-[#4A8B2C] transition shadow-inner cursor-pointer"
-                    />
+                <div className="flex flex-col sm:flex-row sm:items-end gap-4">
+                    <div className="max-w-xs space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <CalendarDays className="w-3.5 h-3.5 text-[#ee7624]" />
+                            <span>Mes a capturar</span>
+                        </label>
+                        <select
+                            value={mesInput}
+                            onChange={(e) => setMesInput(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-2xl bg-slate-950 border border-white/10 text-xs text-white focus:outline-none focus:border-[#4A8B2C] focus:ring-1 focus:ring-[#4A8B2C] transition shadow-inner cursor-pointer"
+                        >
+                            {MESES_CONCURSO.map((m) => (
+                                <option key={m.valor} value={m.valor} className="bg-slate-900 text-white">
+                                    {m.etiqueta}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    <div className="space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <UploadCloud className="w-3.5 h-3.5 text-[#ee7624]" />
+                            <span>Regla 1 · Cuota por canal</span>
+                        </label>
+                        <input
+                            ref={inputExcelRef}
+                            type="file"
+                            accept=".xlsx,.xls,.csv"
+                            onChange={manejarArchivoExcelSeleccionado}
+                            className="hidden"
+                        />
+                        <button
+                            type="button"
+                            onClick={abrirSelectorExcel}
+                            disabled={cargandoExcel}
+                            className="flex items-center gap-1.5 bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-bold px-4 py-2.5 rounded-2xl active:scale-95 transition disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                            <UploadCloud className="w-3.5 h-3.5 text-[#ee7624]" />
+                            {cargandoExcel ? 'Procesando...' : 'Cargar Excel de vendedores'}
+                        </button>
+                    </div>
                 </div>
+
+                {errorExcel && (
+                    <div className="flex items-center gap-2 bg-rose-500/10 border border-rose-500/30 text-rose-200 text-[11px] font-semibold rounded-2xl p-3.5">
+                        <AlertTriangle className="w-4 h-4 text-rose-300 shrink-0" />
+                        <span>{errorExcel}</span>
+                    </div>
+                )}
 
                 {/* BLOQUES VIGENTES (fijos, referencia) */}
                 <div className="space-y-1.5">
@@ -334,6 +435,15 @@ export function AdminCierreMesPage() {
                     </button>
                 </div>
             </div>
+
+            {modalResultado && (
+                <ModalResultadoExcelVentas
+                    resultado={modalResultado}
+                    procesando={autorizando}
+                    onCancelar={() => setModalResultado(null)}
+                    onAutorizar={manejarAutorizarModal}
+                />
+            )}
 
         </div>
     );
