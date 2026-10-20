@@ -143,13 +143,19 @@ export function ModalResultadoExcelVentas({ resultado, procesando, onCancelar, o
                                     {conBoletosBloque.map((a) => (
                                         <li
                                             key={a.participanteId}
-                                            className="flex items-center justify-between gap-3 bg-[#4A8B2C]/10 border border-[#4A8B2C]/30 rounded-xl px-3 py-2"
+                                            className="flex flex-col gap-1 bg-[#4A8B2C]/10 border border-[#4A8B2C]/30 rounded-xl px-3 py-2"
                                         >
-                                            <span className="text-xs font-bold text-white">
-                                                {a.nombre} <span className="text-slate-400 font-normal">· {a.bloque}</span>
-                                            </span>
-                                            <span className="text-[10px] text-emerald-300 font-mono">
-                                                +${formatearMiles(a.ventaExtra)} → {a.boletos} boleto{a.boletos === 1 ? '' : 's'}
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="text-xs font-bold text-white">
+                                                    {a.nombre} <span className="text-slate-400 font-normal">· {a.bloque}</span>
+                                                </span>
+                                                <span className="text-[10px] text-emerald-300 font-mono font-bold">
+                                                    {a.boletos} boleto{a.boletos === 1 ? '' : 's'}
+                                                </span>
+                                            </div>
+                                            <span className="text-[10px] text-slate-400 font-mono">
+                                                venta ${formatearMiles(a.ventaTotalMes)} − base ${formatearMiles(a.baseMensual)} = excedente $
+                                                {formatearMiles(a.ventaExtra)}
                                             </span>
                                         </li>
                                     ))}
@@ -169,13 +175,16 @@ export function ModalResultadoExcelVentas({ resultado, procesando, onCancelar, o
                                     {sinBoletosBloque.map((a) => (
                                         <li
                                             key={a.participanteId}
-                                            className="flex items-center justify-between gap-3 bg-rose-500/10 border border-rose-500/30 rounded-xl px-3 py-2"
+                                            className="flex flex-col gap-1 bg-rose-500/10 border border-rose-500/30 rounded-xl px-3 py-2"
                                         >
-                                            <span className="text-xs font-bold text-white">
-                                                {a.nombre} <span className="text-slate-400 font-normal">· {a.bloque}</span>
-                                            </span>
-                                            <span className="text-[10px] text-rose-300 font-mono">
-                                                venta ${formatearMiles(a.ventaTotalMes)} / base ${formatearMiles(a.baseMensual)}
+                                            <div className="flex items-center justify-between gap-3">
+                                                <span className="text-xs font-bold text-white">
+                                                    {a.nombre} <span className="text-slate-400 font-normal">· {a.bloque}</span>
+                                                </span>
+                                                <span className="text-[10px] text-rose-300 font-mono font-bold">0 boletos</span>
+                                            </div>
+                                            <span className="text-[10px] text-slate-400 font-mono">
+                                                venta ${formatearMiles(a.ventaTotalMes)} − base ${formatearMiles(a.baseMensual)} = sin excedente
                                             </span>
                                         </li>
                                     ))}
