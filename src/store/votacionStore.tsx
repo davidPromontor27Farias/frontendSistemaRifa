@@ -23,6 +23,7 @@ interface VotacionContextValue {
     yaVotoEnMes: (numeroEmpleado: string, mesClave: string) => boolean;
     registrarVoto: (voto: RegistrarVotoInput) => Promise<boolean>;
     revisarNominacion: (nominacionId: string, nuevoEstado: EstadoRevisionVoto) => Promise<void>;
+    anularVoto: (votoId: string) => Promise<void>;
     calcularAcumulados: () => AcumuladoParticipante[];
 }
 
@@ -93,6 +94,14 @@ export function VotacionProvider({ children }: { children: ReactNode }) {
         [recargar]
     );
 
+    const anularVoto = useCallback(
+        async (votoId: string) => {
+            await apiFetch(`/api/votacion/votos/${votoId}`, { method: 'DELETE' });
+            await recargar();
+        },
+        [recargar]
+    );
+
     const calcularAcumulados = useCallback((): AcumuladoParticipante[] => {
         const mapa = new Map<string, AcumuladoParticipante>();
 
@@ -147,6 +156,7 @@ export function VotacionProvider({ children }: { children: ReactNode }) {
             yaVotoEnMes,
             registrarVoto,
             revisarNominacion,
+            anularVoto,
             calcularAcumulados,
         }),
         [
@@ -160,6 +170,7 @@ export function VotacionProvider({ children }: { children: ReactNode }) {
             yaVotoEnMes,
             registrarVoto,
             revisarNominacion,
+            anularVoto,
             calcularAcumulados,
         ]
     );

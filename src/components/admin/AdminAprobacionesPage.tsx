@@ -13,7 +13,7 @@ const PESTANAS: { clave: PestanaAprobacion; etiqueta: string; icono: typeof Cloc
 
 export function AdminAprobacionesPage() {
     const { lista } = useParticipantes();
-    const { votos, revisarNominacion, calcularAcumulados } = useVotacionMensual();
+    const { votos, revisarNominacion, anularVoto, calcularAcumulados } = useVotacionMensual();
     const [pestana, setPestana] = useState<PestanaAprobacion>('pendientes');
 
     const participantePorNumeroEmpleado = useMemo(
@@ -96,6 +96,7 @@ export function AdminAprobacionesPage() {
                         boletosActualesPorNominado={boletosActualesPorNominado}
                         limite={LIMITE_BOLETOS_POR_NOMINADO}
                         onRevisarNominacion={revisarNominacion}
+                        onAnularVoto={anularVoto}
                     />
                 ))}
 

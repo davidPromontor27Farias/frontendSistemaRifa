@@ -1,4 +1,4 @@
-import { CheckCircle2, XCircle, CalendarDays, Ticket, Clock3 } from 'lucide-react';
+import { CheckCircle2, XCircle, CalendarDays, Ticket, Clock3, RotateCcw } from 'lucide-react';
 import type { Participante } from '../../types/participante';
 import type { EstadoRevisionVoto, VotoHistorico } from '../../types/votacionMensual';
 
@@ -8,6 +8,7 @@ interface TarjetaAprobacionVotoProps {
     boletosActualesPorNominado: Map<string, number>;
     limite: number;
     onRevisarNominacion: (nominacionId: string, nuevoEstado: EstadoRevisionVoto) => void;
+    onAnularVoto: (votoId: string) => void;
 }
 
 function formatearFecha(iso: string): string {
@@ -26,15 +27,26 @@ export function TarjetaAprobacionVoto({
     boletosActualesPorNominado,
     limite,
     onRevisarNominacion,
+    onAnularVoto,
 }: TarjetaAprobacionVotoProps) {
     const pendientes = voto.nominaciones.filter((n) => n.estado === 'pendiente').length;
     const aprobados = voto.nominaciones.filter((n) => n.estado === 'aprobado').length;
     const rechazados = voto.nominaciones.filter((n) => n.estado === 'rechazado').length;
+    const tieneRechazados = rechazados > 0;
 
     const resumen =
         pendientes > 0
             ? `${pendientes} boleto${pendientes === 1 ? '' : 's'} por revisar`
             : `${aprobados} aprobado${aprobados === 1 ? '' : 's'} · ${rechazados} rechazado${rechazados === 1 ? '' : 's'}`;
+
+    function manejarAnular() {
+        const advertencia = aprobados > 0
+            ? `Este voto tiene ${aprobados} boleto(s) ya aprobado(s) además de los rechazados. Al anularlo se borra COMPLETO (incluyendo lo aprobado) y ${votante?.nombre ?? 'el votante'} podrá volver a emitir su voto desde cero. ¿Continuar?`
+            : `Se borrará el voto de ${votante?.nombre ?? 'el votante'} y podrá volver a emitir su voto desde cero. ¿Continuar?`;
+        if (window.confirm(advertencia)) {
+            onAnularVoto(voto.id);
+        }
+    }
 
     return (
         <div className="relative w-full bg-slate-900/85 backdrop-blur-xl rounded-2xl border border-white/10 p-5 shadow-xl text-slate-100 space-y-4">
@@ -136,12 +148,26 @@ export function TarjetaAprobacionVoto({
                 })}
             </div>
 
-            <div className="flex flex-wrap items-center gap-1.5">
-                {voto.folios.map((folio) => (
-                    <span key={folio} className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] font-mono text-slate-400">
-                        {folio}
-                    </span>
-                ))}
+            <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex flex-wrap items-center gap-1.5">
+                    {voto.folios.map((folio) => (
+                        <span key={folio} className="px-2 py-1 rounded-lg bg-white/5 border border-white/10 text-[10px] font-mono text-slate-400">
+                            {folio}
+                        </span>
+                    ))}
+                </div>
+
+                {tieneRechazados && (
+                    <button
+                        type="button"
+                        onClick={manejarAnular}
+                        title="Borra este voto completo para que el votante pueda emitirlo de nuevo"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 hover:text-rose-100 text-[10px] font-bold uppercase tracking-wide transition active:scale-95 cursor-pointer shrink-0"
+                    >
+                        <RotateCcw className="w-3.5 h-3.5" />
+                        Anular voto y permitir reenvío
+                    </button>
+                )}
             </div>
         </div>
     );
