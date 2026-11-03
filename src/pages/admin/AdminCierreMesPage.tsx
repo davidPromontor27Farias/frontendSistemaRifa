@@ -19,22 +19,11 @@ import { TablaMatrizVentas } from '../../components/admin/TablaMatrizVentas';
 import { ModalResultadoExcelVentas, type ResultadoProcesarExcelVentas } from '../../components/admin/ModalResultadoExcelVentas';
 import type { FilaMatrizVentas } from '../../types/matrizVentas';
 import { apiFetch } from '../../lib/api';
+import { MESES_CONCURSO, useMesConcursoSeleccionado } from '../../lib/mesConcurso';
 
 function etiquetaDeMes(fecha: Date): string {
     const cruda = new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' }).format(fecha);
     return cruda.charAt(0).toUpperCase() + cruda.slice(1);
-}
-
-const MESES_CONCURSO = [
-    { valor: '2026-10', etiqueta: 'Octubre 2026' },
-    { valor: '2026-11', etiqueta: 'Noviembre 2026' },
-    { valor: '2026-12', etiqueta: 'Diciembre 2026' },
-];
-
-function valorInputMesActual(): string {
-    const ahora = new Date();
-    const actual = `${ahora.getFullYear()}-${String(ahora.getMonth() + 1).padStart(2, '0')}`;
-    return MESES_CONCURSO.some((m) => m.valor === actual) ? actual : MESES_CONCURSO[0].valor;
 }
 
 function formatearFecha(iso: string): string {
@@ -45,7 +34,7 @@ export function AdminCierreMesPage() {
     const { lista } = useParticipantes();
     const { obtenerCierre, guardarCierre } = useMatrizVentas();
 
-    const [mesInput, setMesInput] = useState(valorInputMesActual);
+    const [mesInput, setMesInput] = useMesConcursoSeleccionado();
     const [filas, setFilas] = useState<FilaMatrizVentas[]>([]);
     const [aprobado, setAprobado] = useState(false);
     const [fechaAprobacion, setFechaAprobacion] = useState<string | null>(null);

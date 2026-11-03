@@ -7,6 +7,7 @@ import { MisBoletosPage } from "./pages/MisBoletosPage";
 import { AdminLayout } from "./pages/admin/AdminLayout";
 import { AdminVotacionMensualPage } from "./pages/admin/AdminVotacionMensualPage";
 import { AdminCierreMesPage } from "./pages/admin/AdminCierreMesPage";
+import { AdminPremioEfectivoPage } from "./pages/admin/AdminPremioEfectivoPage";
 import { AdminAcumuladosPage } from "./pages/admin/AdminAcumuladosPage";
 import { AdminTombolaPage } from "./pages/admin/AdminTombolaPage";
 import { RhLayout } from "./pages/rh/RhLayout";
@@ -48,6 +49,7 @@ export default function App() {
                         <Route index element={<Navigate to="votacion" replace />} />
                         <Route path="votacion" element={<AdminVotacionMensualPage />} />
                         <Route path="cierre-mes" element={<AdminCierreMesPage />} />
+                        <Route path="premio-efectivo" element={<AdminPremioEfectivoPage />} />
                         <Route path="acumulados" element={<AdminAcumuladosPage />} />
                         <Route path="tombola" element={<AdminTombolaPage />} />
                         <Route path="aprobaciones" element={<AdminAprobacionesPage/>} />

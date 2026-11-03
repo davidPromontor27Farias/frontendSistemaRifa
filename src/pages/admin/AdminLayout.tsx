@@ -1,11 +1,12 @@
 import { NavLink, Outlet } from "react-router-dom";
-import { LogOut, CalendarDays, BarChart3, Dices, Sparkles, ClipboardCheck, ListChecks } from "lucide-react";
+import { LogOut, CalendarDays, BarChart3, Dices, Sparkles, ClipboardCheck, ListChecks, DollarSign } from "lucide-react";
 import { useAuth } from "../../store/authStore";
 
 const ENLACES = [
     { to: "/admin/votacion", etiqueta: "Votación Mensual", icono: CalendarDays },
     { to: "/admin/aprobaciones", etiqueta: "Aprobación de Boletos", icono: ListChecks},
     { to: "/admin/cierre-mes", etiqueta: "Cierre de Mes", icono: ClipboardCheck },
+    { to: "/admin/premio-efectivo", etiqueta: "Premio Efectivo", icono: DollarSign },
     { to: "/admin/acumulados", etiqueta: "Acumulados", icono: BarChart3 },
     { to: "/admin/tombola", etiqueta: "Tómbola Sorteo", icono: Dices },
 ];

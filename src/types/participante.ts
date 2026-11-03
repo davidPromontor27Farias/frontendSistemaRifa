@@ -13,4 +13,5 @@ export interface Participante {
     estatus: EstatusParticipante;
     fechaAlta: string;
     fechaBaja?: string;
+    supervisorId?: string | null;
 }

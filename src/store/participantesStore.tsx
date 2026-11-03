@@ -11,6 +11,7 @@ interface ParticipantesContextValue {
     editarParticipante: (participante: Participante) => Promise<void>;
     desactivarParticipante: (id: string) => Promise<void>;
     reactivarParticipante: (id: string) => Promise<void>;
+    asignarSupervisor: (id: string, supervisorId: string | null) => Promise<void>;
 }
 
 const ParticipantesContext = createContext<ParticipantesContextValue | null>(null);
@@ -76,11 +77,22 @@ export function ParticipantesProvider({ children }: { children: ReactNode }) {
         [recargar]
     );
 
+    const asignarSupervisor = useCallback(
+        async (id: string, supervisorId: string | null) => {
+            await apiFetch<Participante>(`/api/participantes/${id}`, {
+                method: "PATCH",
+                body: JSON.stringify({ supervisorId }),
+            });
+            await recargar();
+        },
+        [recargar]
+    );
+
     const activos = useMemo(() => lista.filter((p) => p.estatus === "activo"), [lista]);
 
     const valor = useMemo<ParticipantesContextValue>(
-        () => ({ lista, activos, cargando, recargar, agregarParticipante, editarParticipante, desactivarParticipante, reactivarParticipante }),
-        [lista, activos, cargando, recargar, agregarParticipante, editarParticipante, desactivarParticipante, reactivarParticipante]
+        () => ({ lista, activos, cargando, recargar, agregarParticipante, editarParticipante, desactivarParticipante, reactivarParticipante, asignarSupervisor }),
+        [lista, activos, cargando, recargar, agregarParticipante, editarParticipante, desactivarParticipante, reactivarParticipante, asignarSupervisor]
     );
 
     return <ParticipantesContext.Provider value={valor}>{children}</ParticipantesContext.Provider>;
