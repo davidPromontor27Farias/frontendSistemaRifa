@@ -115,7 +115,10 @@ export function VotacionProvider({ children }: { children: ReactNode }) {
                     boletosPorMes: {},
                 };
 
-                const disponibles = LIMITE_BOLETOS_POR_NOMINADO - existente.totalBoletos;
+                // El tope de LIMITE_BOLETOS_POR_NOMINADO se reinicia cada mes: se compara
+                // contra lo acumulado ESE mesClave, no contra el total acumulado de todos los meses.
+                const boletosDelMes = existente.boletosPorMes[voto.mesClave] ?? 0;
+                const disponibles = LIMITE_BOLETOS_POR_NOMINADO - boletosDelMes;
                 if (disponibles <= 0) {
                     mapa.set(nominacion.participanteId, existente);
                     continue;
@@ -123,7 +126,7 @@ export function VotacionProvider({ children }: { children: ReactNode }) {
 
                 const boletosAAgregar = Math.min(nominacion.boletos, disponibles);
                 existente.totalBoletos += boletosAAgregar;
-                existente.boletosPorMes[voto.mesClave] = (existente.boletosPorMes[voto.mesClave] ?? 0) + boletosAAgregar;
+                existente.boletosPorMes[voto.mesClave] = boletosDelMes + boletosAAgregar;
                 mapa.set(nominacion.participanteId, existente);
             }
         }
