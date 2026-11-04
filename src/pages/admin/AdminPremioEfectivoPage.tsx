@@ -296,6 +296,32 @@ export function AdminPremioEfectivoPage() {
                                                 </tr>
                                             )}
                                         </tbody>
+                                        {reporte.porVendedor.length > 0 && (
+                                            <tfoot>
+                                                <tr className="bg-slate-950/80 border-t-2 border-white/15 text-[11px] font-black uppercase tracking-wider">
+                                                    <td className="px-5 py-4 text-white">Totales</td>
+                                                    <td className="px-5 py-4 text-center text-slate-200">
+                                                        {formatearMoneda(reporte.porVendedor.reduce((acc, v) => acc + v.ventaTotal, 0))}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center text-slate-300">
+                                                        {formatearMoneda(reporte.porVendedor.reduce((acc, v) => acc + v.metaTotal, 0))}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center text-slate-200">
+                                                        {formatearMoneda(reporte.porVendedor.reduce((acc, v) => acc + v.excedente, 0))}
+                                                    </td>
+                                                    <td className="px-5 py-4"></td>
+                                                    <td className="px-5 py-4 text-center text-[#ee7624]">
+                                                        {formatearMoneda(reporte.porVendedor.reduce((acc, v) => acc + v.premioEjecutivo, 0))}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center text-emerald-300">
+                                                        {formatearMoneda(reporte.porVendedor.reduce((acc, v) => acc + v.premioSupervisor, 0))}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-center text-white">
+                                                        {formatearMoneda(reporte.porVendedor.reduce((acc, v) => acc + v.premioTotal, 0))}
+                                                    </td>
+                                                </tr>
+                                            </tfoot>
+                                        )}
                                     </table>
                                 </div>
                             </div>
