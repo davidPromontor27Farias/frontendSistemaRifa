@@ -82,7 +82,7 @@ export function TarjetaAprobacionVoto({
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 {voto.nominaciones.map((nominacion) => {
                     const badge = BADGE_ESTADO[nominacion.estado];
-                    const actuales = boletosActualesPorNominado.get(nominacion.participanteId) ?? 0;
+                    const actuales = boletosActualesPorNominado.get(`${nominacion.participanteId}|${voto.mesClave}`) ?? 0;
                     const limiteAlcanzado = actuales >= limite;
 
                     return (

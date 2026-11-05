@@ -24,7 +24,9 @@ export function AdminAprobacionesPage() {
     const boletosActualesPorNominado = useMemo(() => {
         const mapa = new Map<string, number>();
         for (const acumulado of calcularAcumulados()) {
-            mapa.set(acumulado.participanteId, acumulado.totalBoletos);
+            for (const [mesClave, boletos] of Object.entries(acumulado.boletosPorMes)) {
+                mapa.set(`${acumulado.participanteId}|${mesClave}`, boletos);
+            }
         }
         return mapa;
     }, [calcularAcumulados]);
@@ -60,7 +62,7 @@ export function AdminAprobacionesPage() {
                     <ShieldAlert className="w-4 h-4 text-[#ee7624]" />
                 </div>
                 <p className="leading-relaxed text-slate-200">
-                    <strong className="text-[#ee7624] font-bold">Regla de límite:</strong> cada nominado puede recibir un máximo de {LIMITE_BOLETOS_POR_NOMINADO} boletos en total. Si ya alcanzó el límite, puedes seguir aprobando boletos para él, pero no se le sumarán adicionales.
+                    <strong className="text-[#ee7624] font-bold">Regla de límite:</strong> cada nominado puede recibir un máximo de {LIMITE_BOLETOS_POR_NOMINADO} boletos por mes. Si ya alcanzó el límite ese mes, puedes seguir aprobando boletos para él, pero no se le sumarán adicionales en ese mes.
                 </p>
             </div>
 
