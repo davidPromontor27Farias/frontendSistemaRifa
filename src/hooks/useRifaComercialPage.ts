@@ -24,8 +24,8 @@ function crearSeleccionInicial(): SeleccionNominado[] {
 
 export function useRifaComercialPage() {
     const { usuario } = useAuth();
-    const { activos } = useParticipantes();
-    const { ventanaEstaAbierta, yaVotoEnMes, registrarVoto, votos } = useVotacionMensual();
+    const { activos, lista } = useParticipantes();
+    const { ventanaEstaAbierta, yaVotoEnMes, registrarVoto, votos, calcularAcumulados } = useVotacionMensual();
 
     const { clave: mesClave, etiqueta: mesEtiqueta } = useMemo(obtenerMesActivo, []);
 
@@ -56,6 +56,20 @@ export function useRifaComercialPage() {
             fechaEmision: voto.fechaEmision,
         };
     }, [usuario, votoEmitido, votos, mesClave, mesEtiqueta]);
+
+    const equipo = useMemo(
+        () => (usuario?.participanteId ? lista.filter((p) => p.supervisorId === usuario.participanteId) : []),
+        [lista, usuario?.participanteId]
+    );
+    const esGerente = equipo.length > 0;
+
+    const votosEquipo = useMemo(() => {
+        const acumulados = calcularAcumulados();
+        return equipo.map((participante) => ({
+            participante,
+            totalBoletos: acumulados.find((a) => a.participanteId === participante.id)?.totalBoletos ?? 0,
+        }));
+    }, [equipo, calcularAcumulados]);
 
     function abrirSelector(indice: number) {
         if (votoEmitido) return;
@@ -139,5 +153,7 @@ export function useRifaComercialPage() {
         seleccionarEnIndiceActivo,
         quitarColaborador,
         actualizarJustificacion,
+        esGerente,
+        votosEquipo,
     };
 }
