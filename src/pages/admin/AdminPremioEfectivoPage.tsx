@@ -8,10 +8,12 @@ import {
     CheckCircle2,
     XCircle,
     Users,
+    Download,
 } from 'lucide-react';
 import { apiFetch } from '../../lib/api';
 import { MESES_CONCURSO, useMesConcursoSeleccionado } from '../../lib/mesConcurso';
 import type { ReportePremioEfectivo, TramoPremio } from '../../types/premioEfectivo';
+import { exportarExcel } from '../../utils/exportarExcel';
 
 function etiquetaDeMes(fecha: Date): string {
     const cruda = new Intl.DateTimeFormat('es-MX', { month: 'long', year: 'numeric' }).format(fecha);
@@ -34,18 +36,47 @@ function obtenerIniciales(nombre?: string | null): string {
 
 export function AdminPremioEfectivoPage() {
     const [mesInput, setMesInput] = useMesConcursoSeleccionado();
-    const [reporte, setReporte] = useState<ReportePremioEfectivo | null>(null);
-    const [cargando, setCargando] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    const [formConfig, setFormConfig] = useState<{ presupuestoBase: string; umbralActivacion: string; topeMensual: string; tramos: TramoPremio[]; cebesScalingUp: string[] } | null>(null);
-    const [guardandoConfig, setGuardandoConfig] = useState(false);
 
     const [anioTexto, mesTexto] = mesInput.split('-');
     const mesIndice = Number(mesTexto) - 1;
     const fechaReferencia = new Date(Number(anioTexto), mesIndice, 1);
     const mesClave = `${Number(anioTexto)}-${mesIndice + 1}`;
     const mesEtiqueta = etiquetaDeMes(fechaReferencia);
+
+    return (
+        <div className="space-y-6 text-slate-100 pt-10">
+            <div className="bg-slate-900/85 backdrop-blur-xl rounded-3xl border border-white/10 p-5 shadow-2xl">
+                <div className="max-w-xs space-y-1.5">
+                    <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                        <CalendarDays className="w-3.5 h-3.5 text-[#ee7624]" />
+                        <span>Mes a calcular</span>
+                    </label>
+                    <select
+                        value={mesInput}
+                        onChange={(e) => setMesInput(e.target.value)}
+                        className="w-full px-4 py-2.5 rounded-2xl bg-slate-950 border border-white/10 text-xs text-white focus:outline-none focus:border-[#4A8B2C] focus:ring-1 focus:ring-[#4A8B2C] transition shadow-inner cursor-pointer"
+                    >
+                        {MESES_CONCURSO.map((m) => (
+                            <option key={m.valor} value={m.valor} className="bg-slate-900 text-white">
+                                {m.etiqueta}
+                            </option>
+                        ))}
+                    </select>
+                </div>
+            </div>
+
+            <ReportePremioEfectivoOctubre mesClave={mesClave} mesEtiqueta={mesEtiqueta} />
+        </div>
+    );
+}
+
+function ReportePremioEfectivoOctubre({ mesClave, mesEtiqueta }: { mesClave: string; mesEtiqueta: string }) {
+    const [reporte, setReporte] = useState<ReportePremioEfectivo | null>(null);
+    const [cargando, setCargando] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+
+    const [formConfig, setFormConfig] = useState<{ presupuestoBase: string; umbralActivacion: string; topeMensual: string; tramos: TramoPremio[]; cebesScalingUp: string[] } | null>(null);
+    const [guardandoConfig, setGuardandoConfig] = useState(false);
 
     async function cargarReporte() {
         setCargando(true);
@@ -69,7 +100,7 @@ export function AdminPremioEfectivoPage() {
 
     useEffect(() => {
         cargarReporte();
-        // eslint-disabloks/exhaustive-deps
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [mesClave]);
 
     async function manejarGuardarConfig() {
@@ -94,12 +125,24 @@ export function AdminPremioEfectivoPage() {
         }
     }
 
+    function exportarVendedores() {
+        if (!reporte) return;
+        const datos = reporte.porVendedor.map((v) => ({
+            Vendedor: v.nombre,
+            Venta: v.ventaTotal,
+            Meta: v.metaTotal,
+            Excedente: v.excedente,
+            Elegible: v.elegible ? 'Sí' : 'No',
+            'Detalle cuota': v.detalleCuota,
+            'Premio ejecutivo': v.premioEjecutivo,
+            'Premio supervisor': v.premioSupervisor,
+            'Premio total': v.premioTotal,
+        }));
+        exportarExcel(datos, `premio_efectivo_${mesClave}.xlsx`, 'Premio Efectivo');
+    }
+
     return (
-        <div className="space-y-6 text-slate-100 pt-10">
-
-            {/* AVISO: FÓRMULA SUJETA A CONFIRMAR */}
-
-
+        <>
             {error && (
                 <div className="flex items-center gap-2 bg-rose-500/10 border border-rose-500/30 text-rose-200 text-[11px] font-semibold rounded-2xl p-3.5">
                     <AlertTriangle className="w-4 h-4 text-rose-300 shrink-0" />
@@ -107,27 +150,8 @@ export function AdminPremioEfectivoPage() {
                 </div>
             )}
 
-            {/* MES A CAPTURAR + PRESUPUESTO BASE */}
             <div className="bg-slate-900/85 backdrop-blur-xl rounded-3xl border border-white/10 p-5 shadow-2xl">
                 <div className="flex flex-wrap items-end gap-4">
-                    <div className="max-w-xs space-y-1.5">
-                        <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                            <CalendarDays className="w-3.5 h-3.5 text-[#ee7624]" />
-                            <span>Mes a calcular</span>
-                        </label>
-                        <select
-                            value={mesInput}
-                            onChange={(e) => setMesInput(e.target.value)}
-                            className="w-full px-4 py-2.5 rounded-2xl bg-slate-950 border border-white/10 text-xs text-white focus:outline-none focus:border-[#4A8B2C] focus:ring-1 focus:ring-[#4A8B2C] transition shadow-inner cursor-pointer"
-                        >
-                            {MESES_CONCURSO.map((m) => (
-                                <option key={m.valor} value={m.valor} className="bg-slate-900 text-white">
-                                    {m.etiqueta}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
                     {formConfig && (
                         <>
                             <div className="max-w-xs space-y-1.5">
@@ -162,8 +186,6 @@ export function AdminPremioEfectivoPage() {
                 </div>
             ) : (
                 <>
-
-
                     {!reporte.compania.activa ? (
                         <div className="bg-gradient-to-br from-[#ee7624]/10 via-slate-900/90 to-slate-900/90 backdrop-blur-xl border border-[#ee7624]/30 rounded-3xl p-10 shadow-2xl text-center space-y-5">
                             <div className="mx-auto w-16 h-16 rounded-2xl bg-[#ee7624]/15 border border-[#ee7624]/30 flex items-center justify-center">
@@ -206,7 +228,6 @@ export function AdminPremioEfectivoPage() {
                         </div>
                     ) : (
                         <>
-                            {/* RESUMEN COMPAÑÍA */}
                             <div className="bg-slate-900/85 backdrop-blur-xl rounded-3xl border border-white/10 p-5 shadow-2xl space-y-4">
                                 <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                                     <DollarSign className="w-3.5 h-3.5 text-[#ee7624]" />
@@ -238,8 +259,17 @@ export function AdminPremioEfectivoPage() {
                                 </div>
                             </div>
 
-                            {/* TABLA POR VENDEDOR */}
                             <div className="relative w-full bg-slate-900/85 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden text-slate-100">
+                                <div className="flex items-center justify-end px-5 py-3 border-b border-white/10">
+                                    <button
+                                        type="button"
+                                        onClick={exportarVendedores}
+                                        className="flex items-center gap-2 bg-gradient-to-r from-[#4A8B2C] via-emerald-600 to-[#ee7624] hover:brightness-110 active:scale-95 text-white text-xs font-black uppercase tracking-wider px-4 py-2 rounded-2xl transition cursor-pointer"
+                                    >
+                                        <Download className="w-4 h-4" />
+                                        Exportar a Excel
+                                    </button>
+                                </div>
                                 <div className="overflow-x-auto">
                                     <table className="w-full text-left text-xs border-collapse">
                                         <thead>
@@ -281,7 +311,6 @@ export function AdminPremioEfectivoPage() {
                                                     <td className="px-5 py-4 text-center font-black text-[#ee7624]">{formatearMoneda(v.premioEjecutivo)}</td>
                                                     <td className="px-5 py-4 text-center font-black text-emerald-300">{formatearMoneda(v.premioSupervisor)}</td>
                                                     <td className="px-5 py-4 text-center font-black text-white">{formatearMoneda(v.premioTotal)}</td>
-
                                                 </tr>
                                             ))}
 
@@ -326,7 +355,6 @@ export function AdminPremioEfectivoPage() {
                                 </div>
                             </div>
 
-                            {/* RESUMEN POR SUPERVISOR */}
                             <div className="bg-slate-900/85 backdrop-blur-xl rounded-3xl border border-white/10 p-5 shadow-2xl space-y-4">
                                 <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
                                     <Users className="w-3.5 h-3.5 text-[#ee7624]" />
@@ -357,6 +385,6 @@ export function AdminPremioEfectivoPage() {
                     )}
                 </>
             )}
-        </div>
+        </>
     );
 }

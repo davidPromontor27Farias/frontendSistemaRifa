@@ -1,6 +1,7 @@
-import { User, Ticket, Building2, ShieldAlert } from 'lucide-react';
+import { User, Ticket, Building2, ShieldAlert, Download } from 'lucide-react';
 import type { Participante } from '../../types/participante';
 import type { AcumuladoParticipante } from '../../types/votacionMensual';
+import { exportarExcel } from '../../utils/exportarExcel';
 
 interface FilaAcumulado {
     participante: Participante;
@@ -22,8 +23,29 @@ export function TablaAcumulados({ filas }: TablaAcumuladosProps) {
         (a, b) => (b.acumulado?.totalBoletos ?? 0) - (a.acumulado?.totalBoletos ?? 0)
     );
 
+    function exportar() {
+        const datos = ordenadas.map(({ participante, acumulado }) => ({
+            'Número de empleado': participante.numeroEmpleado,
+            Participante: participante.nombre,
+            Departamento: participante.departamento,
+            Estatus: participante.estatus === 'activo' ? 'Activo' : 'Inactivo',
+            'Boletos acumulados': acumulado?.totalBoletos ?? 0,
+        }));
+        exportarExcel(datos, `acumulados_${new Date().toISOString().slice(0, 10)}.xlsx`, 'Acumulados');
+    }
+
     return (
         <div className="relative w-full bg-slate-900/85 backdrop-blur-xl rounded-3xl border border-white/10 shadow-2xl overflow-hidden text-slate-100">
+            <div className="flex items-center justify-end px-5 py-3 border-b border-white/10">
+                <button
+                    type="button"
+                    onClick={exportar}
+                    className="flex items-center gap-2 bg-gradient-to-r from-[#4A8B2C] via-emerald-600 to-[#ee7624] hover:brightness-110 active:scale-95 text-white text-xs font-black uppercase tracking-wider px-4 py-2 rounded-2xl transition cursor-pointer"
+                >
+                    <Download className="w-4 h-4" />
+                    Exportar a Excel
+                </button>
+            </div>
             <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                     
