@@ -30,3 +30,8 @@ export function useMesConcursoSeleccionado() {
 
     return [mesInput, setMesInput] as const;
 }
+
+export function usaConcursoSemanal(mesClave: string): boolean {
+    return mesClave === '2026-11';
+    
+}

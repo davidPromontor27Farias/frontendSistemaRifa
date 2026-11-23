@@ -34,7 +34,13 @@ export function useRifaComercialPage() {
     const [indiceSelectorActivo, setIndiceSelectorActivo] = useState<number | null>(null);
 
     const opciones: ColaboradorNominable[] = useMemo(
-        () => activos.filter((p) => p.tipo === 'no_comercial' && p.id !== usuario?.participanteId),
+        () =>
+            activos.filter(
+                (p) =>
+                    p.tipo === 'no_comercial' &&
+                    p.id !== usuario?.participanteId &&
+                    p.area.trim().toLowerCase() !== 'ecatepec'
+            ),
         [activos, usuario?.participanteId]
     );
 

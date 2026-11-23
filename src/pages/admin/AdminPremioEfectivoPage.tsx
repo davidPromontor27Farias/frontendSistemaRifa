@@ -11,8 +11,10 @@ import {
     Download,
 } from 'lucide-react';
 import { apiFetch } from '../../lib/api';
-import { MESES_CONCURSO, useMesConcursoSeleccionado } from '../../lib/mesConcurso';
+import { MESES_CONCURSO, useMesConcursoSeleccionado, usaConcursoSemanal } from '../../lib/mesConcurso';
 import type { ReportePremioEfectivo, TramoPremio } from '../../types/premioEfectivo';
+import type { ConfigConcursoSemanal, ReporteConcursoSemanal } from '../../types/concursoSemanal';
+import { ReporteConcursoSemanalNoviembre } from '../../components/admin/ReporteConcursoSemanalNoviembre';
 import { exportarExcel } from '../../utils/exportarExcel';
 
 function etiquetaDeMes(fecha: Date): string {
@@ -36,6 +38,7 @@ function obtenerIniciales(nombre?: string | null): string {
 
 export function AdminPremioEfectivoPage() {
     const [mesInput, setMesInput] = useMesConcursoSeleccionado();
+    const [refreshKey, setRefreshKey] = useState(0);
 
     const [anioTexto, mesTexto] = mesInput.split('-');
     const mesIndice = Number(mesTexto) - 1;
@@ -46,26 +49,93 @@ export function AdminPremioEfectivoPage() {
     return (
         <div className="space-y-6 text-slate-100 pt-10">
             <div className="bg-slate-900/85 backdrop-blur-xl rounded-3xl border border-white/10 p-5 shadow-2xl">
-                <div className="max-w-xs space-y-1.5">
-                    <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                        <CalendarDays className="w-3.5 h-3.5 text-[#ee7624]" />
-                        <span>Mes a calcular</span>
-                    </label>
-                    <select
-                        value={mesInput}
-                        onChange={(e) => setMesInput(e.target.value)}
-                        className="w-full px-4 py-2.5 rounded-2xl bg-slate-950 border border-white/10 text-xs text-white focus:outline-none focus:border-[#4A8B2C] focus:ring-1 focus:ring-[#4A8B2C] transition shadow-inner cursor-pointer"
-                    >
-                        {MESES_CONCURSO.map((m) => (
-                            <option key={m.valor} value={m.valor} className="bg-slate-900 text-white">
-                                {m.etiqueta}
-                            </option>
-                        ))}
-                    </select>
+                <div className="flex flex-wrap items-end gap-4">
+                    <div className="max-w-xs space-y-1.5">
+                        <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <CalendarDays className="w-3.5 h-3.5 text-[#ee7624]" />
+                            <span>Mes a calcular</span>
+                        </label>
+                        <select
+                            value={mesInput}
+                            onChange={(e) => setMesInput(e.target.value)}
+                            className="w-full px-4 py-2.5 rounded-2xl bg-slate-950 border border-white/10 text-xs text-white focus:outline-none focus:border-[#4A8B2C] focus:ring-1 focus:ring-[#4A8B2C] transition shadow-inner cursor-pointer"
+                        >
+                            {MESES_CONCURSO.map((m) => (
+                                <option key={m.valor} value={m.valor} className="bg-slate-900 text-white">
+                                    {m.etiqueta}
+                                </option>
+                            ))}
+                        </select>
+                    </div>
+
+                    {usaConcursoSemanal(mesClave) && (
+                        <InputMetaMensualNoviembre mesClave={mesClave} onGuardado={() => setRefreshKey((k) => k + 1)} />
+                    )}
                 </div>
             </div>
 
-            <ReportePremioEfectivoOctubre mesClave={mesClave} mesEtiqueta={mesEtiqueta} />
+            {usaConcursoSemanal(mesClave) ? (
+                <ReporteConcursoSemanalNoviembre mesClave={mesClave} mesEtiqueta={mesEtiqueta} refreshKey={refreshKey} />
+            ) : (
+                <ReportePremioEfectivoOctubre mesClave={mesClave} mesEtiqueta={mesEtiqueta} />
+            )}
+        </div>
+    );
+}
+
+function InputMetaMensualNoviembre({ mesClave, onGuardado }: { mesClave: string; onGuardado: () => void }) {
+    const [valor, setValor] = useState('0');
+    const [configActual, setConfigActual] = useState<ConfigConcursoSemanal | null>(null);
+    const [guardando, setGuardando] = useState(false);
+
+    useEffect(() => {
+        apiFetch<ReporteConcursoSemanal>(`/api/concurso-semanal/${mesClave}`).then((datos) => {
+            setConfigActual(datos.config);
+            setValor(String(datos.config.metaMensual));
+        });
+    }, [mesClave]);
+
+    async function guardar() {
+        if (!configActual) return;
+        setGuardando(true);
+        try {
+            await apiFetch(`/api/concurso-semanal/${mesClave}/config`, {
+                method: 'PUT',
+                body: JSON.stringify({
+                    metaMensual: Number(valor) || 0,
+                    montoPorTramo: configActual.montoPorTramo,
+                    tamanioTramo: configActual.tamanioTramo,
+                    cebesScalingUp: configActual.cebesScalingUp,
+                }),
+            });
+            onGuardado();
+        } finally {
+            setGuardando(false);
+        }
+    }
+
+    return (
+        <div className="max-w-xs space-y-1.5">
+            <label className="text-[11px] font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                <DollarSign className="w-3.5 h-3.5 text-[#ee7624]" />
+                <span>Meta mensual</span>
+            </label>
+            <div className="flex gap-2">
+                <input
+                    type="number"
+                    value={valor}
+                    onChange={(e) => setValor(e.target.value)}
+                    className="w-full px-4 py-2.5 rounded-2xl bg-slate-950 border border-white/10 text-xs text-white focus:outline-none focus:border-[#4A8B2C] focus:ring-1 focus:ring-[#4A8B2C] transition shadow-inner"
+                />
+                <button
+                    type="button"
+                    onClick={guardar}
+                    disabled={guardando || !configActual}
+                    className="flex items-center gap-1.5 bg-gradient-to-r from-[#4A8B2C] via-emerald-600 to-[#ee7624] hover:brightness-110 active:scale-95 text-white text-xs font-black uppercase tracking-wider px-4 py-2.5 rounded-2xl transition cursor-pointer disabled:opacity-50 shrink-0"
+                >
+                    <Save className="w-4 h-4" />
+                </button>
+            </div>
         </div>
     );
 }
